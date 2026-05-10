@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT))
 def cmd_ui(_):
     """启动 Gradio Web UI"""
     import subprocess
-    print("[motif] 启动 Web UI: http://localhost:7860")
+    print("[motif] 启动 Web UI...")
     subprocess.run([sys.executable, "server.py"])
 
 

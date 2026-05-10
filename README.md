@@ -281,7 +281,7 @@ All functionality is accessed through the unified entry point `motif.py`:
 python motif.py ui
 ```
 
-Open `http://localhost:6060`, upload music + video clips + optional text prompt → one-click output.
+Open `http://localhost:6006`, upload music + video clips + optional text prompt → one-click output.
 
 #### CLI
 
