@@ -1,0 +1,28 @@
+# Core
+langgraph>=1.0
+openai>=2.0
+dashscope>=1.20
+pydantic>=2.0
+python-dotenv>=1.0
+loguru>=0.7
+
+# Web UI
+gradio>=6.0
+
+# Audio
+librosa>=0.10
+soundfile>=0.12
+scipy>=1.10
+
+# Video
+opencv-python>=4.8
+scenedetect>=0.6
+
+# ML / embeddings
+torch>=2.0
+transformers>=4.40
+numpy>=1.24
+
+# Note: ffmpeg must be installed separately (system binary, not pip).
+# Note: CLIP weights (clip-vit-base-patch32) auto-downloaded on first use,
+#   or place them in ./clip-vit-base-patch32/ to avoid network.

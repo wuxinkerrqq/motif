@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+
+# Virtual env
+.venv/
+venv/
+env/
+
+# Secrets — NEVER commit
+.env
+*.key
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Runtime output
+output/
+*.mp4
+*.flac
+*.wav
+*.mp3
+!demo/*.mp4
+
+# Model weights (download separately)
+clip-vit-base-patch32/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Source material (copyright / large files)
+素材/
+缓存/
+视频素材和音乐素材/
+uploads/
+
+# Dev scratch / temp
+tmp_code/
+render.py
+rerun_planner.py
+
+# Binary / design files
+*.pptx
+架构图.jpg
+架构图.pptx
+
+# Backups / scratch
+*.bak
+*.snap_bak
+*.tmp
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
