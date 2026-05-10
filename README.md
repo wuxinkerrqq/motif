@@ -31,7 +31,7 @@ Upload music and videos, and the system handles everything: beat analysis → sc
 | Music | Footage | Video |
 |-------|---------|-------|
 | Aimer "Brave Shine" | Demon Slayer | [Watch](demo/demo1.mp4) |
-| Hiroyuki Sawano "GravityWall" | Fate/stay night | [Watch](demo/demo2.mp4) |
+| Hiroyuki Sawano "GravityWall" | Fate/stay night | [Watch](demo/demo3_small.mp4) |
 
 ---
 
