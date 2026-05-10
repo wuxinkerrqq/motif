@@ -57,15 +57,17 @@ def _scan_debug_options() -> tuple[list[str], list[str], list[str], list[str]]:
 
 
 NODE_LABEL = {
-    "precheck":       "预检",
-    "preprocess":     "视频预处理",
-    "audio_analyzer": "音频分析",
-    "video_tagger":   "视频打标签",
-    "edit_planner":   "剪辑规划（ReAct）",
-    "reviewer":       "质量评审",
-    "renderer":       "视频渲染",
-    "deliver":        "交付",
+    "precheck":       "Precheck",
+    "preprocess":     "Video Preprocessing",
+    "audio_analyzer": "Audio Analysis",
+    "video_tagger":   "Video Tagging",
+    "edit_planner":   "Edit Planning",
+    "reviewer":       "Quality Review",
+    "renderer":       "Rendering",
+    "deliver":        "Deliver",
 }
+
+NODE_ORDER = ["precheck", "preprocess", "audio_analyzer", "video_tagger", "edit_planner", "renderer", "deliver"]
 
 
 def _upload_status(music, videos) -> tuple[str, bool]:
@@ -83,14 +85,14 @@ def _upload_status(music, videos) -> tuple[str, bool]:
 
     parts, ready = [], True
     if _ready(music):
-        parts.append(f"✅ 音乐：{_name(music)}")
+        parts.append(f"✅ Music: {_name(music)}")
     else:
-        parts.append("⏳ 音乐：未上传")
+        parts.append("⏳ Music: not uploaded")
         ready = False
     if videos:
-        parts.append(f"✅ 视频：{len(videos)} 个文件已就绪")
+        parts.append(f"✅ Video: {len(videos)} files ready")
     else:
-        parts.append("⏳ 视频：未上传")
+        parts.append("⏳ Video: not uploaded")
         ready = False
     return "　|　".join(parts), ready
 
@@ -101,11 +103,19 @@ async def _run(initial_state: dict, background_str: str | None,
                video_paths: list[str], output_path: str,
                no_reviewer: bool, task_id: str):
     """核心生成器，供两个入口共用。yield (log_str, start_btn_update, video_update, task_id)"""
-    log_lines: list[str] = []
+    import asyncio
+    from collections import deque
 
-    def add(line: str) -> str:
-        log_lines.append(line)
-        return "\n".join(log_lines)
+    log_lines: deque = deque(maxlen=200)
+    log_sink_id = None
+
+    def _sink(message):
+        record = message.record
+        text = f"[{record['time'].strftime('%H:%M:%S')}] {record['message']}"
+        log_lines.append(text)
+
+    # 注册 loguru sink 捕获所有后台日志
+    log_sink_id = logger.add(_sink, format="{message}", level="INFO")
 
     def cur() -> str:
         return "\n".join(log_lines)
@@ -123,36 +133,42 @@ async def _run(initial_state: dict, background_str: str | None,
             try:
                 from agents.manager import parse_video_intent
                 filenames = [Path(p).name for p in video_paths]
-                add("🔍 解析素材描述...")
+                log_lines.append("🔍 Parsing description...")
                 yield cur(), gr.update(interactive=False), gr.update(visible=False), task_id
                 video_metadata = await parse_video_intent(filenames, background_str)
                 if video_metadata:
                     initial_state["video_metadata"] = video_metadata
-                    add(f"✓ 素材描述解析完成，命中 {len(video_metadata)}/{len(filenames)} 个文件")
+                    log_lines.append(f"✓ Description parsed, matched {len(video_metadata)}/{len(filenames)} files")
                 else:
-                    add("⚠ 素材描述未命中具体文件，作为全局背景使用")
+                    log_lines.append("⚠ Description did not match specific files, using as global context")
                 yield cur(), gr.update(interactive=False), gr.update(visible=False), task_id
             except Exception as e:
-                logger.warning(f"[Server] 意图解析失败: {e}")
-                add("⚠ 素材描述解析失败，跳过")
+                logger.warning(f"[Server] Intent parsing failed: {e}")
+                log_lines.append("⚠ Description parsing failed, skipping")
                 yield cur(), gr.update(interactive=False), gr.update(visible=False), task_id
 
         async for chunk in graph.astream(initial_state, config):
             for node_name in chunk:
-                add(f"✓ {NODE_LABEL.get(node_name, node_name)} 完成")
+                label = NODE_LABEL.get(node_name, node_name)
+                log_lines.append(f"━━━ ✓ {label} done ━━━")
             yield cur(), gr.update(interactive=False), gr.update(visible=False), task_id
 
     except Exception as e:
-        logger.exception(f"[Server] 流程异常: {e}")
-        add(f"❌ 出错：{e}")
+        logger.exception(f"[Server] Pipeline error: {e}")
+        log_lines.append(f"❌ Error: {e}")
         yield cur(), gr.update(interactive=True), gr.update(visible=False), task_id
+        if log_sink_id is not None:
+            logger.remove(log_sink_id)
         return
 
+    if log_sink_id is not None:
+        logger.remove(log_sink_id)
+
     if Path(output_path).exists():
-        add("🎉 完成！")
+        log_lines.append("🎉 Done!")
         yield cur(), gr.update(interactive=True), gr.update(value=output_path, visible=True), task_id
     else:
-        add("❌ 渲染结束但输出文件未找到（请查看终端日志）")
+        log_lines.append("❌ Rendering finished but output file not found (check terminal logs)")
         yield cur(), gr.update(interactive=True), gr.update(visible=False), task_id
 
 
@@ -163,10 +179,10 @@ async def run_pipeline(music_file, video_files, background_text, no_reviewer, _l
         return Path(str(f))
 
     if not music_file:
-        yield "❌ 请上传音乐文件", gr.update(interactive=True), gr.update(visible=False), task_id
+        yield "❌ Please upload a music file", gr.update(interactive=True), gr.update(visible=False), task_id
         return
     if not video_files:
-        yield "❌ 请上传视频素材（至少一个）", gr.update(interactive=True), gr.update(visible=False), task_id
+        yield "❌ Please upload at least one video", gr.update(interactive=True), gr.update(visible=False), task_id
         return
 
     task_id = uuid.uuid4().hex[:8]
@@ -281,59 +297,49 @@ async def run_pipeline_from_path(
 
 # ── Gradio UI ──────────────────────────────────────────────────────────────────
 
-with gr.Blocks(title="Motif AMV 混剪系统") as demo:
+with gr.Blocks(title="Motif") as demo:
 
     task_id_state = gr.State("")
 
-    gr.Markdown("# Motif — AI AMV 混剪系统")
+    gr.Markdown("# Motif — Music-Driven Video Editor")
 
     with gr.Row():
         # 左列：窄，上传 + 配置
         with gr.Column(scale=1, min_width=260):
             music_input = gr.File(
-                label="音乐文件",
+                label="Music",
                 file_types=[".mp3", ".wav", ".flac", ".m4a"],
             )
             video_input = gr.File(
-                label="视频素材（可多选）",
+                label="Video Footage (multiple)",
                 file_count="multiple",
                 file_types=[".mp4", ".mov", ".mkv", ".avi"],
             )
             background_input = gr.Textbox(
-                label="背景描述（可选）",
-                placeholder="可以简要说明一下音乐来自哪里，视频素材来自哪里，你想剪什么风格等等",
+                label="Description (optional)",
+                placeholder="Describe the source material, desired style, or editing intent...",
                 lines=3,
             )
-            no_reviewer_input = gr.Checkbox(label="启用 Reviewer（更慢，质量更高）", value=False, visible=False)
-            upload_status_md = gr.Markdown("⏳ 音乐：未上传　|　⏳ 视频：未上传")
+            no_reviewer_input = gr.Checkbox(label="Enable Reviewer", value=False, visible=False)
+            upload_status_md = gr.Markdown("⏳ Music: not uploaded　|　⏳ Video: not uploaded")
             start_btn = gr.Button(
-                "⏳ 等待文件上传...",
+                "⏳ Waiting for upload...",
                 variant="primary",
                 size="lg",
                 interactive=False,
             )
 
-            with gr.Accordion("调试模式（服务器本地路径）", open=False):
-                _m, _v, _aj, _st = _scan_debug_options()
-                with gr.Row():
-                    debug_refresh_btn = gr.Button("刷新列表", size="sm", scale=0)
-                music_path_input  = gr.Dropdown(choices=_m,  value=_m[0] if _m else None,   label="音乐文件",          allow_custom_value=True)
-                video_dir_input   = gr.Dropdown(choices=_v,  value=_v[0] if _v else None,   label="视频目录",          allow_custom_value=True)
-                audio_json_input  = gr.Dropdown(choices=["（不使用缓存）"] + _aj, value="（不使用缓存）", label="音频JSON缓存（可选）",    allow_custom_value=True)
-                scene_table_input = gr.Dropdown(choices=["（不使用缓存）"] + _st, value="（不使用缓存）", label="SceneTable缓存（可选）", allow_custom_value=True)
-                debug_start_btn   = gr.Button("从服务器路径启动", variant="secondary", size="lg")
-
         # 右列：宽，日志 + 视频
         with gr.Column(scale=3):
             log_output = gr.Textbox(
-                label="运行日志",
+                label="Log",
                 lines=22,
                 max_lines=50,
                 interactive=False,
-                placeholder="点击「开始」后，这里会实时显示进度...",
+                placeholder="Progress will appear here after clicking Start...",
             )
             video_output = gr.Video(
-                label="输出视频",
+                label="Output Video",
                 visible=False,
             )
 
@@ -341,7 +347,7 @@ with gr.Blocks(title="Motif AMV 混剪系统") as demo:
 
     def _on_file_change(music, videos):
         status_text, ready = _upload_status(music, videos)
-        return gr.update(value=status_text), gr.update(value="🚀 开始" if ready else "⏳ 等待文件上传...", interactive=ready)
+        return gr.update(value=status_text), gr.update(value="🚀 Start" if ready else "⏳ Waiting for upload...", interactive=ready)
 
     for evt in (music_input.upload, music_input.clear, video_input.upload, video_input.clear):
         evt(fn=_on_file_change, inputs=[music_input, video_input], outputs=[upload_status_md, start_btn])
@@ -353,24 +359,6 @@ with gr.Blocks(title="Motif AMV 混剪系统") as demo:
         inputs=[music_input, video_input, background_input, no_reviewer_input, log_output, task_id_state],
         outputs=_run_outputs,
     )
-    debug_start_btn.click(
-        fn=run_pipeline_from_path,
-        inputs=[music_path_input, video_dir_input, audio_json_input, scene_table_input,
-                background_input, no_reviewer_input, log_output, task_id_state],
-        outputs=_run_outputs,
-    )
-
-    def _refresh_debug():
-        m, v, aj, st = _scan_debug_options()
-        return (
-            gr.update(choices=m,  value=m[0] if m else None),
-            gr.update(choices=v,  value=v[0] if v else None),
-            gr.update(choices=["（不使用缓存）"] + aj, value="（不使用缓存）"),
-            gr.update(choices=["（不使用缓存）"] + st, value="（不使用缓存）"),
-        )
-
-    debug_refresh_btn.click(fn=_refresh_debug, inputs=[],
-                            outputs=[music_path_input, video_dir_input, audio_json_input, scene_table_input])
 
 
 demo.queue()
@@ -382,4 +370,5 @@ if __name__ == "__main__":
         server_name="0.0.0.0",
         server_port=6006,
         max_file_size="4gb",
+        theme=gr.themes.Soft(),
     )

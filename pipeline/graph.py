@@ -97,20 +97,12 @@ async def video_tagger_node(state: GraphState) -> dict:
         if Path(analysis_path).exists():
             material_analysis = json.load(open(analysis_path, encoding="utf-8"))
 
-    # 构建 CLIP 视觉 embedding（唯一的向量索引）
-    clip_embeddings, clip_scene_ids = None, None
-    if save_path and Path(save_path).exists():
-        from video.scene_embedder import build_clip_index
-        clip_embeddings, clip_scene_ids = build_clip_index(save_path)
-        logger.info(f"[Graph] CLIP embedding 就绪，shape={clip_embeddings.shape}")
-
-    # scene_embeddings 直接复用 CLIP（同空间），废弃独立的文本 embedding 通道
     return {
         "scene_table": scene_table,
-        "scene_embeddings": clip_embeddings,
-        "scene_ids": clip_scene_ids,
-        "clip_embeddings": clip_embeddings,
-        "clip_scene_ids": clip_scene_ids,
+        "scene_embeddings": None,
+        "scene_ids": None,
+        "clip_embeddings": None,
+        "clip_scene_ids": None,
         "material_analysis": material_analysis,
     }
 
