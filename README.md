@@ -1,258 +1,258 @@
 # Motif
 
-**让音乐替你剪视频。**
+**Let music edit your videos.**
 
-> 给一首歌 + 一堆视频素材，自动产出一支卡点混剪。
+> Feed it a song + a pile of video clips, get a beat-synced remix back.
 
 <p align="center">
-  <a href="#demo">演示</a> ·
-  <a href="#architecture">系统架构</a> ·
-  <a href="#quick-start">快速开始</a>
+  <a href="#demo">Demo</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#quick-start">Quick Start</a>
 </p>
 
 ---
 
-## ✨ 它能做什么
+## ✨ What It Does
 
-给一首音乐 + 一组视频素材，自动产出一支**节奏同步、情绪对齐**的混剪视频。
+Given a music track + a set of video clips, Motif automatically produces a **beat-synced, emotion-aligned** video remix.
 
-素材不限类型：
-- 动漫 AMV
-- 电影 / 剧集混剪
-- 演唱会、舞台视频
-- 个人 Vlog、旅行记录
+Any footage works:
+- Anime AMV
+- Film / TV series mashups
+- Concert & stage recordings
+- Personal vlogs & travel footage
 
-上传音乐和视频后，系统会自动完成：节拍分析 → 场景理解 → 镜头规划 → 转场合成，一条命令出片。
+Upload music and videos, and the system handles everything: beat analysis → scene understanding → shot planning → transition rendering. One command, one output.
 
 ---
 
 ## 🎬 Demo <a id="demo"></a>
 
-| 音乐 | 素材 | 视频 |
-|------|------|------|
-| Aimer《Brave Shine》 | 鬼灭之刃 | [观看](demo/demo1.mp4) |
-| 泽野弘之《GravityWall》 | Fate/stay night | [观看](demo/demo2.mp4) |
+| Music | Footage | Video |
+|-------|---------|-------|
+| Aimer "Brave Shine" | Demon Slayer | [Watch](demo/demo1.mp4) |
+| Hiroyuki Sawano "GravityWall" | Fate/stay night | [Watch](demo/demo2.mp4) |
 
 ---
 
-## 🏗 系统架构 <a id="architecture"></a>
+## 🏗 Architecture <a id="architecture"></a>
 
-### 总览
+### Overview
 
-![总览架构](docs/figure1.jpg)
+![Architecture Overview](docs/figure1.jpg)
 
-系统由 **5 个模块串联**，其中音频分析与视频分析并行执行：
+The system chains **5 modules**, with audio analysis and video analysis running in parallel:
 
-| 模块 | 职责 | 是否使用 LLM |
-|------|------|:---:|
-| **Intent Parser** | 解析用户的文字需求，匹配到素材文件 | ✅ Qwen |
-| **Audio Analyzer** | 三层音频分析（信号 → 事件 → 语义） | ✅ GPT-5.5 |
-| **Video Tagger** | 场景切分 + 多模态标注 | ✅ Qwen-VL |
-| **Edit Planner** | 规划镜头序列 + 转场 + 变速 | ✅ GPT-5.5 |
-| **Renderer** | FFmpeg 合成最终视频 | — |
+| Module | Role | Uses LLM |
+|--------|------|:---------:|
+| **Intent Parser** | Parse user text input, match to footage files | ✅ Qwen |
+| **Audio Analyzer** | Three-layer audio analysis (signal → event → semantic) | ✅ GPT-5.5 |
+| **Video Tagger** | Scene segmentation + multimodal annotation | ✅ Qwen-VL |
+| **Edit Planner** | Plan shot sequence + transitions + speed changes | ✅ GPT-5.5 |
+| **Renderer** | FFmpeg final composition | — |
 
-### 各模块细节
+### Module Details
 
-![模块流程](docs/figure2.jpg)
+![Module Details](docs/figure2.jpg)
 
-**Audio Analyzer（三层解析）**
-- **Signal Layer (L1)**：All-In-One 段落分割 + Demucs 分轨 + librosa 节拍/能量
-- **Event Layer (L2)**：候选打分 + 自适应阈值，输出节奏锚点与 pacing hint
-- **Semantic Layer (L3)**：GPT-5.5 语义增强（情绪、VAD、叙事弧线）
+**Audio Analyzer (three layers)**
+- **Signal Layer (L1)**: All-In-One structure segmentation + Demucs stem separation + librosa beat/energy extraction
+- **Event Layer (L2)**: Candidate scoring + adaptive thresholding → rhythmic anchor points + pacing hints
+- **Semantic Layer (L3)**: GPT-5.5 semantic enrichment (mood, VAD, narrative arc)
 
 **Video Tagger**
-- PySceneDetect 切分场景 + 抽取关键帧
-- OpenCV 光流分析 → 客观 motion_intensity
-- Qwen-VL 整体视频理解（每个源视频一次）
-- Qwen-VL 逐场景打标签（mood / 描述 / VAD）
+- PySceneDetect scene segmentation + keyframe extraction
+- OpenCV optical flow → objective motion_intensity
+- Qwen-VL holistic video understanding (once per source video)
+- Qwen-VL per-scene tagging (mood / description / VAD)
 
 **Edit Planner (v5)**
-- **Call 1 — Anchor Key Moments**：为段落分界点与段内高潮点选定 scene
-- **Compute Remaining Segments**：算出剩余时间区间
-- **Call 2 — Fill Remaining Segments**：为每个剩余区间填充过渡镜头
+- **Call 1 — Anchor Key Moments**: Select scenes for section boundaries and in-section highlights
+- **Compute Remaining Segments**: Calculate unfilled time intervals
+- **Call 2 — Fill Remaining Segments**: Fill each gap with transition footage
 
 ---
 
-## 🧠 规划器演进：从 ≈$5 到 ≈$0.25
+## 🧠 Planner Evolution: From ≈$5 to ≈$0.25
 
-Edit Planner 经过了 5 轮架构迭代——每一版都在回答"**哪些事让算法做，哪些事让 LLM 做**"。
+The Edit Planner went through 5 architecture iterations — each answering: **"What should algorithms handle vs. what should the LLM decide?"**
 
-| 版本 | 架构 | 成本 | 时长 | 效果 |
-|------|------|------|------|------|
-| v1 | 全局 ReAct（80 轮） | ≈$5 | 慢 | Context 爆炸，覆盖率 76% |
-| v2 | GPT 全局 + Qwen 段内填充 | ≈$1.5 | 中 | 小模型决策跑偏 |
-| v3 | GPT Stage 1 + Beam Search 算法选片 | ≈$0.15 | 40s | 快但僵硬，缺审美 |
-| v4 | GPT 全局 + 段内 ReAct 混合 | ≈$2-3 | 15min | 平衡但贵 |
-| **v5** | **GPT 全素材直给 + 两次分层调用** | **≈$0.25** | **≈2min** | **最终方案** |
+| Version | Architecture | Cost | Duration | Result |
+|---------|-------------|------|----------|--------|
+| v1 | Global ReAct (80 iterations) | ≈$5 | Slow | Context explosion, 76% coverage |
+| v2 | GPT global + Qwen local fill | ≈$1.5 | Medium | Smaller model drifts off |
+| v3 | GPT Stage 1 + Beam Search | ≈$0.15 | 40s | Fast but rigid, no aesthetics |
+| v4 | GPT global + per-segment ReAct | ≈$2-3 | 15min | Balanced but expensive |
+| **v5** | **Full scene metadata in context + two-call layered planning** | **≈$0.25** | **≈2min** | **Final approach** |
 
-**v5 的关键突破**：放弃"用 query 检索 top-K 给 LLM"这条路，直接把**全部 scene 的元数据塞进 context**。既然 GPT-5.5 有 1M context，素材库再大也装得下——**零检索损失，全局决策一次到位**。
+**The v5 breakthrough**: Instead of using queries to retrieve top-K scenes for the LLM, we feed **all scene metadata directly into context**. With GPT-5.5's 1M context window, even large footage libraries fit easily — **zero retrieval loss, global decision-making in one shot**.
 
 ---
 
-## 💡 设计思考：为什么这样剪
+## 💡 Design Rationale
 
-### 音频分析：为什么是三层结构，而不是直接让 AI 听音乐
+### Audio: Why Three Layers Instead of Letting AI Listen Directly
 
-最初的想法很自然：**直接用一个能听音乐的多模态模型做分析，让它一次性给出段落、锚点、情绪**。
+The naive approach: **let a multimodal model listen to the music and output segments, anchors, and moods in one pass**.
 
-但真的试了一下就发现两个致命问题：
+Two fatal problems emerged in practice:
 
-1. **输出粒度太粗**：模型给出的是"整体氛围偏悲伤"、"中段有高潮"这种定性描述，拿不到"58.3s 处有一个强鼓点"这种剪辑真正需要的锚点
-2. **时间戳全是幻觉**：模型报告的时间点和实际音乐对不上，经常差 1-2 秒甚至完全瞎编。对剪辑任务来说这是致命的——**卡点剪辑的精度要求是毫秒级**
+1. **Output granularity too coarse**: The model produces qualitative descriptions like "overall sad atmosphere" or "climax in the middle" — not the "strong drum hit at 58.3s" that beat-synced editing actually needs
+2. **Timestamps are hallucinated**: Reported time points are off by 1-2 seconds or completely fabricated. For beat-synced editing, **millisecond precision is non-negotiable**
 
-一个自然的改进：**用算法工具（librosa / Demucs / All-In-One）精确算出节拍、onset、段落边界**，这些工具给出的时间戳是客观精准的。
+Natural improvement: **use algorithmic tools (librosa / Demucs / All-In-One) for precise beat, onset, and segment boundary detection** — these produce objectively accurate timestamps.
 
-但新问题又来了：**即使 AI 看到了 39 个精确时间戳，它也选不出哪一个最重要**——LLM 对时间的感知能力很弱，"这个 0.58 的点比那个 0.48 的点更重要"这种数值优先级，AI 判断得并不可靠。
+But a new problem: **even with 39 precise timestamps, the AI can't reliably judge which ones matter most** — LLMs have weak temporal perception. Distinguishing "importance 0.58 vs 0.48" is not something they do well.
 
-**最终架构：算法负责"精度"，LLM 负责"理解"**
+**Final architecture: algorithms handle precision, LLMs handle understanding**
 
-| 层 | 工具 | 职责 |
-|---|------|------|
-| L1 | librosa + Demucs + All-In-One | 精确给出节拍、段落、onset（客观数据） |
-| L2 | 自适应阈值算法 | 从数百个候选 onset 里筛出真正的锚点（降维） |
-| L3 | GPT-5.5 | 为每个锚点添加情绪标签、叙事弧线（主观理解） |
+| Layer | Tool | Responsibility |
+|-------|------|---------------|
+| L1 | librosa + Demucs + All-In-One | Precise beats, segments, onsets (objective data) |
+| L2 | Adaptive threshold algorithm | Filter hundreds of onset candidates down to true anchors (dimensionality reduction) |
+| L3 | GPT-5.5 | Add mood labels, narrative arc (subjective understanding) |
 
-这三层的分工本质是：**能算的事不让 LLM 猜，能理解的事不让算法硬编码**。
+The division principle: **don't let LLMs guess what can be computed; don't hardcode what requires understanding.**
 
-### 视频理解：为什么要切场景、算光流，而不是一股脑喂给多模态模型
+### Video: Why Scene Detection + Optical Flow Instead of Feeding Everything to a Multimodal Model
 
-音频侧踩过的坑，视频侧也一样躲不掉。
+The same pitfalls from audio apply to video.
 
-最初的想法同样很朴素：**直接把整个视频丢给 GPT-5.5 / Qwen-VL，让它一次性看完并告诉我每一段讲了什么**。
+The naive approach: **feed the entire video to GPT-5.5 / Qwen-VL and ask it to describe each segment**.
 
-但同样两个问题让这条路走不通：
+Same two problems:
 
-1. **时间感知依然是软肋**：模型能理解视频"在讲什么"，但说不准"第几秒到第几秒是哪个画面"。剪辑任务里，我要的是"这个拔刀动作发生在源视频 30.3s 处"——这种毫秒级定位模型给不了
-2. **粒度还是太粗**：一个 10 分钟的视频里可能有 50 个独立场景，模型只会给出几句整体概括，无法对每个场景单独描述——而剪辑需要的恰恰是**场景级**的语义标签
+1. **Temporal perception remains weak**: The model understands "what's happening" but can't pinpoint "this sword draw happens at 30.3s in the source" — the millisecond-level localization that editing demands
+2. **Granularity too coarse**: A 10-minute video may contain 50 distinct scenes, but the model only produces a few summary sentences — editing needs **scene-level** semantic labels
 
-自然而然回到"专业工具做细粒度处理"的思路：
+The natural solution: specialized tools for fine-grained processing:
 
-- **PySceneDetect**：用像素差分算法精确切分场景边界，给出毫秒级的 scene 起止时间戳
-- **OpenCV 光流**：客观计算每个场景的 motion_intensity（动作强度 0~1），比 LLM 凭感觉打分稳定得多
+- **PySceneDetect**: Pixel-difference algorithms for precise scene boundary detection with millisecond timestamps
+- **OpenCV optical flow**: Objective motion_intensity computation (0~1) per scene — far more stable than LLM-based scoring
 
-算法把视频切好、量化好之后，再让多模态模型做它擅长的事：
+After algorithms segment and quantify the video, multimodal models do what they're good at:
 
-- **Qwen-VL 整体理解**（每个源视频一次）：读懂视频整体叙事，作为 per-scene 标注的背景上下文
-- **Qwen-VL 逐场景标注**：给每个场景单独输出 mood / description / VAD 情感值
+- **Qwen-VL holistic understanding** (once per source video): Grasp the overall narrative as context for per-scene tagging
+- **Qwen-VL per-scene tagging**: Output mood / description / VAD for each individual scene
 
-**最终架构**：
+**Final architecture**:
 
-| 层 | 工具 | 职责 |
-|---|------|------|
-| 场景切分 | PySceneDetect | 客观边界（时间戳精确） |
-| 运动分析 | OpenCV 光流 | 客观动作强度 |
-| 整体理解 | Qwen-VL | 全片叙事背景 |
-| 场景标注 | Qwen-VL | 场景级语义 + 情绪 |
+| Layer | Tool | Responsibility |
+|-------|------|---------------|
+| Scene segmentation | PySceneDetect | Objective boundaries (precise timestamps) |
+| Motion analysis | OpenCV optical flow | Objective action intensity |
+| Holistic understanding | Qwen-VL | Full-video narrative context |
+| Scene tagging | Qwen-VL | Scene-level semantics + mood |
 
-和音频侧完全相同的设计哲学：**算法搞定"在哪里 / 有多强"，LLM 搞定"是什么 / 什么感觉"**。
+Same design philosophy as audio: **algorithms handle "where / how strong", LLMs handle "what / how it feels".**
 
-### 剪辑规划：让 AI 模仿人类剪辑师的工作流
+### Edit Planning: Making AI Mimic a Human Editor's Workflow
 
-以 Aimer《Brave Shine (TV size)》为例，音频分析得到段落结构：
+Using Aimer's "Brave Shine (TV size)" as an example, audio analysis yields this structure:
 
 ```
 intro   [0.00  ~ 17.21]
 verse   [17.21 ~ 39.67]
 verse   [39.67 ~ 56.51]
-chorus  [56.51 ~ 88.78]    ← 全曲最燃
+chorus  [56.51 ~ 88.78]    ← peak intensity
 end     [88.78 ~ 91.36]
 ```
 
-换作人类用 PR 剪辑，大概率会**先锁定段落转折点**（0.0 / 17.21 / 39.67 / 56.51 / 88.78 / 91.36），决定每个点该放什么关键画面——开场要压抑、verse→chorus 要爆发、结尾要余韵。这是骨架。
+A human editor using Premiere Pro would likely **first lock down the section transition points** (0.0 / 17.21 / 39.67 / 56.51 / 88.78 / 91.36), deciding what key visuals go at each — opening sets the tone, verse→chorus needs an explosion, ending needs resolution. This is the skeleton.
 
-然后再处理**段落内的关键节拍点**（key moments）——比如 intro 段里 5.97s 有一个 importance=0.58 的鼓点强拍，必须卡上角色的一个动作瞬间。
+Then handle **in-section key beat points** (key moments) — e.g., at 5.97s in the intro there's an importance=0.58 drum hit that must align with a character's action moment.
 
-最后**用过渡镜头把中间填满**，参考整段的情绪基调与叙事逻辑。
+Finally, **fill the gaps with transitional footage**, following the segment's emotional baseline and narrative logic.
 
-这就自然推出了**分治思想的三层结构**：
+This naturally leads to a **divide-and-conquer three-layer structure**:
 
-| 层 | 含义 | 决策方式 |
-|---|------|---------|
-| **L1** | 段落分界点 | 骨架，最高优先级 |
-| **L2** | 段落内 importance 较高的锚点 | 情绪高光，次优先级 |
-| **L3** | L1/L2 占坑后的剩余区间 | 用过渡镜头填满 |
+| Layer | Meaning | Decision Priority |
+|-------|---------|-------------------|
+| **L1** | Section boundaries | Skeleton, highest priority |
+| **L2** | High-importance in-section anchors | Emotional highlights, second priority |
+| **L3** | Remaining intervals after L1/L2 | Fill with transitional footage |
 
-### 关键设计决策
+### Key Design Decisions
 
-**1. L1 先占坑，L2 在剩余区间里筛**
+**1. L1 claims first, L2 selects from the remainder**
 
-如果 L1 和 L2 同时选，会出现 56.51s 这种**既是段落分界点又是 importance 最高锚点**的情况——两边都想占，互相打架。
+If L1 and L2 select simultaneously, conflicts arise — e.g., 56.51s is both a section boundary AND the highest-importance anchor. Both want to claim it.
 
-**解法**：L1 先占坑产生"禁区"，L2 只能从禁区之外选。相当于时间线减法：
+**Solution**: L1 claims first, creating "exclusion zones". L2 can only select from outside these zones. Essentially timeline subtraction:
 
 ```
-总时间线 − L1 占用 = L1 之后的剩余
-剩余 ∩ key_moments = L2 候选
-L2 再筛选 → L2 占坑
-剩余 − L2 = 最终待填的 Gap
+Total timeline − L1 occupied = remaining after L1
+remaining ∩ key_moments = L2 candidates
+L2 filtered → L2 occupied
+remaining − L2 = final gaps for L3
 ```
 
-这个架构意外地**和内存分配算法同构**——L1/L2/L3 就是三个优先级的内存块，Gap 是碎片。
+This architecture is **isomorphic to memory allocation** — L1/L2/L3 are priority-ordered memory blocks, gaps are fragmentation.
 
-**2. 首尾特殊处理，中间对齐中点**
+**2. Special handling for start/end, midpoint alignment for middle points**
 
-L1 占坑的时长不能一刀切：
-- **开场**（0.0s）：必须从 0 开始，时长随自然切入点（≈3.5s）
-- **结尾**（91.36s）：必须覆盖到歌曲结束
-- **中间分界点**（17.21 等）：前后对半吃（1.0~1.5s），scene 中点对齐音乐锚点时间
+L1 claim durations can't be uniform:
+- **Opening** (0.0s): Must start from 0, duration follows natural entry point (≈3.5s)
+- **Ending** (91.36s): Must cover until song ends
+- **Middle boundaries** (17.21 etc.): Split evenly before/after (1.0~1.5s), scene midpoint aligned to music anchor time
 
-**3. 碎片整理：按优先级挪位**
+**3. Fragment defragmentation: shift by priority**
 
-L2 按中点对齐后，相邻占坑区间可能产生 <1s 的碎片（塞不下任何镜头）。
+After L2 midpoint alignment, adjacent claimed intervals may produce <1s fragments (too short for any shot).
 
-**策略 C**（最终采用）：
-- Gap < 0.5s：扩展相邻块吞掉
-- 0.5s ≤ Gap < 1.0s：低优先级块平移贴紧高优先级块
-- Gap ≥ 1.0s：保留给 L3
+**Strategy C** (final approach):
+- Gap < 0.5s: Extend adjacent block to absorb it
+- 0.5s ≤ Gap < 1.0s: Shift lower-priority block to adjoin higher-priority block
+- Gap ≥ 1.0s: Keep for L3
 
-**4. 叙事连贯性：避免"上一秒哭泣下一秒燃爆"**
+**4. Narrative continuity: preventing "crying one second, battle the next"**
 
-分治最大的风险是**各层独立选 scene 导致情绪跳变**。解法是让 Stage 1 (GPT-5.5) 在输出 L1/L3 规划时，**显式描述段落间的情绪走向**——不是孤立地描述每段，而是交代 "intro → verse 应该如何过渡"。
+The biggest risk of divide-and-conquer is **each layer independently selecting scenes that create emotional whiplash**. The solution: have Stage 1 (GPT-5.5) **explicitly describe the emotional trajectory between segments** — not describing each segment in isolation, but specifying how "intro → verse should transition."
 
-### 为什么最终选了 v5：全素材直给 LLM
+### Why v5 Won: Full Scene Metadata Directly to LLM
 
-早期版本（v1~v4）都在和"上下文限制"做斗争：
-- 用 CLIP 检索 top-K 给 LLM（但 query 是有损压缩）
-- 用 ReAct 多轮对话（但 context 越滚越长）
-- 用算法选片 + LLM 规划（但算法没有审美）
+Earlier versions (v1~v4) all fought against "context limitations":
+- CLIP retrieval of top-K for LLM (but queries are lossy compression)
+- ReAct multi-turn dialogue (but context grows unboundedly)
+- Algorithmic scene selection + LLM planning (but algorithms lack aesthetics)
 
-直到意识到一件事：**GPT-5.5 有 1M context，完整 scene_table 通常 20-30K token 就够装下**。那为什么还要搞检索？
+Until realizing: **GPT-5.5 has 1M context, and a complete scene_table typically fits in 20-30K tokens**. Why bother with retrieval at all?
 
-v5 直接把全部 scene 元数据塞给 LLM，分两步决策：
-1. **Call 1**：锚定 L1/L2 的关键 scene
-2. **Call 2**：填充 L3 的剩余 Gap
+v5 feeds all scene metadata directly to the LLM in two calls:
+1. **Call 1**: Anchor L1/L2 key scenes
+2. **Call 2**: Fill L3 remaining gaps
 
-**两次调用搞定，成本 ≈$0.25，时长 ≈2 分钟，效果反而最好**——因为 LLM 不再受限于 query 的描述力，能从全量素材里自由挑选最合适的镜头。
+**Two calls total, ≈$0.25 cost, ≈2 minutes, best results** — because the LLM is no longer limited by query expressiveness and can freely choose the most fitting shots from the entire library.
 
-这也印证了一个更普遍的原则：**当上下文足够大时，检索反而是信息损失源**。
+This validates a broader principle: **when context is large enough, retrieval becomes an information loss source.**
 
 ---
 
-## 🔧 工程坑与解决方案
+## 🔧 Engineering Challenges & Solutions
 
-### 1. 帧率取整导致累积时间漂移
+### 1. Frame Rate Rounding Causes Cumulative Time Drift
 
-源视频 30fps → 输出强制 24fps，FFmpeg 每个 clip 多写 1-2 帧，37 个 clip 累积 **+1.97 秒**（整片慢半拍）。
+Source videos at 30fps → output forced to 24fps. FFmpeg writes 1-2 extra frames per clip; across 37 clips this accumulates to **+1.97 seconds** (the entire video drifts half a beat behind the music).
 
-**修复**：改用 `-frames:v N` 显式指定输出帧数，N = 音乐时长 × 24。累积漂移从 +1970ms 降到 **0ms**。
+**Fix**: Use `-frames:v N` to explicitly specify output frame count, where N = audio duration × 24. Cumulative drift reduced from +1970ms to **0ms**.
 
-### 2. 单大视频导致 OOM
+### 2. Large Single Video Causes OOM
 
-单个 165MB / 10min 视频 × 并发场景分析 × 光流计算 × Qwen-VL 上传 → 内存峰值直接爆，触发 Windows 页面文件不足。
+A single 165MB / 10min video × concurrent scene analysis × optical flow computation × Qwen-VL upload → memory peak explodes, triggering Windows page file exhaustion.
 
-**修复**：预处理阶段自动切分大视频为 ≤3 分钟的小段，每段独立处理。内存峰值从 ~8GB 降到 ~1.5GB，并发压力下降 5 倍。
+**Fix**: Preprocessing stage automatically splits large videos into ≤3 minute segments, each processed independently. Peak memory reduced from ~8GB to ~1.5GB, concurrent pressure reduced 5×.
 
-### 3. FFmpeg Filter 的 Timeline 兼容性
+### 3. FFmpeg Filter Timeline Compatibility
 
-`crop` / `scale` 等 filter 不支持 `enable` 时间开关（仅在 `hue` / `gblur` / `fade` 等支持 Timeline 的 filter 上能用）。最初实现的"开头 0.2s 抖动后复位"的转场特效因此失败。
+`crop` / `scale` filters don't support the `enable` timeline switch (only `hue` / `gblur` / `fade` and similar filters do). Initial implementation of "0.2s shake then reset" transition effects failed silently.
 
-**修复**：按 filter 类型区别处理——支持 Timeline 的用 `enable` 开关；不支持的用全 clip 持续特效。失败率从 ~10% 降到 0%。
+**Fix**: Handle by filter type — use `enable` switch for Timeline-supported filters; use full-clip persistent effects for others. Failure rate reduced from ~10% to 0%.
 
 ---
 
-## 🚀 快速开始 <a id="quick-start"></a>
+## 🚀 Quick Start <a id="quick-start"></a>
 
-### 环境
+### Environment
 
 ```bash
 conda create -n motif python=3.11 -y
@@ -260,20 +260,20 @@ conda activate motif
 pip install -r requirements.txt
 ```
 
-另需 FFmpeg 安装并加入 PATH。
+FFmpeg must also be installed and available in PATH.
 
-### 配置
+### Configuration
 
-复制 `.env.example` 为 `.env`，填入 API Key：
+Copy `.env.example` to `.env` and fill in your API keys:
 
 ```env
-OPENAI_KEY=sk-...          # GPT-5.5（音频语义 + 规划器）
-DASHSCOPE_API_KEY=sk-...   # Qwen-VL（视频理解）+ Qwen（意图解析）
+OPENAI_KEY=sk-...          # GPT-5.5 (audio semantics + planner)
+DASHSCOPE_API_KEY=sk-...   # Qwen-VL (video understanding) + Qwen (intent parsing)
 ```
 
-### 使用方式
+### Usage
 
-所有功能通过统一入口 `motif.py` 提供：
+All functionality is accessed through the unified entry point `motif.py`:
 
 #### Web UI
 
@@ -281,61 +281,61 @@ DASHSCOPE_API_KEY=sk-...   # Qwen-VL（视频理解）+ Qwen（意图解析）
 python motif.py ui
 ```
 
-浏览器访问 `http://localhost:6060`，上传音乐 + 视频素材+用户输入(可选) → 一键出片。
+Open `http://localhost:6060`, upload music + video clips + optional text prompt → one-click output.
 
-#### 命令行（CLI）
+#### CLI
 
 ```bash
 python motif.py run \
     --music your_song.mp3 \
     --videos your_videos/ \
-    --background "Fate AMV，前半段忧郁后半段燃爆"
+    --background "Fate AMV, melancholic first half, explosive chorus"
 ```
 
-`--background` 是自由文本，作品背景、剪辑意图、风格偏好都可以混着写（可选）。
+`--background` accepts free-form text — footage context, editing intent, style preferences all work (optional).
 
-#### 仅渲染（跳过规划，复用已有计划）
+#### Render Only (skip planning, reuse existing plan)
 
 ```bash
 python motif.py render-only --music your_song.mp3
 ```
 
-运行 `python motif.py -h` 查看完整参数。
+Run `python motif.py -h` for full parameter reference.
 
 ---
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 motif/
-├── motif.py               # 统一入口（ui / run / render-only）
-├── server.py              # Gradio Web UI 实现
+├── motif.py               # Unified entry point (ui / run / render-only)
+├── server.py              # Gradio Web UI implementation
 │
 ├── agents/                # Intent Parser / Planner Tools
-├── audio/                 # 音频三层分析
-├── video/                 # 视频场景检测 + 多模态标注
-├── planner/               # Edit Planner v5 核心
-├── pipeline/              # LangGraph 编排 + FFmpeg 渲染
-├── models/                # Pydantic 数据模型
-├── prompts/               # 各 Agent 的 System Prompt
-└── utils/                 # 通用工具
+├── audio/                 # Three-layer audio analysis
+├── video/                 # Scene detection + multimodal annotation
+├── planner/               # Edit Planner v5 core
+├── pipeline/              # LangGraph orchestration + FFmpeg rendering
+├── models/                # Pydantic data models
+├── prompts/               # Agent system prompts
+└── utils/                 # Shared utilities
 ```
 
 ---
 
-## ⚠️ 已知局限
+## ⚠️ Known Limitations
 
-- **规划质量 ≤ 标注质量**：Qwen-VL 若将某 scene 描述错，GPT-5.5 会连带选错
-- **段落衔接仍有跳变感**：L1 分界点的视觉衔接靠 LLM 自行判断，偶尔出现"举剑 → 沉思"这种断崖式过渡
-- **素材数量影响决策质量**：素材过少时 LLM 选择空间受限；过多时（>200 scenes）接近 context 上限
-- **长素材内存压力**：单个 ≥10 分钟的视频需手动预切分（或由系统自动切段处理）
+- **Planning quality ≤ tagging quality**: If Qwen-VL misdescribes a scene, GPT-5.5 will select it based on wrong information
+- **Section transitions can feel abrupt**: Visual continuity at L1 boundaries relies on LLM judgment — occasionally produces jarring cuts (e.g., "raising sword → suddenly meditating")
+- **Footage quantity affects decision quality**: Too few scenes limits LLM choices; too many (>200 scenes) approaches context limits
+- **Large file memory pressure**: Single videos ≥10 minutes require manual pre-splitting (or automatic segmentation by the system)
 
 ---
 
-## 📜 致谢
+## 📜 Acknowledgments
 
-- **DIRECT-Claw** 论文（三阶段 Screenwriter / Director / Editor 架构启发）
-- **LangGraph**（状态机编排）
+- **DIRECT-Claw** paper (three-stage Screenwriter / Director / Editor architecture inspiration)
+- **LangGraph** (state machine orchestration)
 - **All-In-One / Demucs / librosa / PySceneDetect**
 
 ---
