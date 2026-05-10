@@ -20,6 +20,7 @@ class GraphState(TypedDict, total=False):
     video_metadata: dict | None   # {filename: {"source", "episode", "context"}}，由意图解析生成
     editing_style: Literal["visual_driven", "story_driven", "emotion_driven"]
     output_path: str
+    project_name: str              # projects/<project_name>/ 下集中所有产物
 
     # ── 预处理产物 ─────────────────────────────────────────────────────────────
     stripped_video_paths: list[str]

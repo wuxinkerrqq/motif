@@ -15,6 +15,7 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 import shutil
 import uuid
 import warnings
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,8 @@ warnings.filterwarnings("ignore", message="Deserializing unregistered type")
 import gradio as gr
 from loguru import logger
 
-UPLOAD_DIR = Path("output/uploads")
+from utils.project_paths import ProjectPaths
+
 active_tasks: dict[str, dict[str, Any]] = {}
 
 _MOTIF_ROOT = Path(__file__).parent
@@ -185,23 +187,28 @@ async def run_pipeline(music_file, video_files, background_text, no_reviewer, _l
         yield "❌ Please upload at least one video", gr.update(interactive=True), gr.update(visible=False), task_id
         return
 
-    task_id = uuid.uuid4().hex[:8]
-    task_dir = UPLOAD_DIR / task_id
-    task_dir.mkdir(parents=True, exist_ok=True)
+    # 项目名 = project_YYYYMMDD_HHMMSS，所有产物进 projects/<name>/
+    project_name = f"project_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    pp = ProjectPaths(project_name)
+    pp.create_all()
+    task_id = project_name
 
+    # 复制原始音乐到 music/
     music_src = _fp(music_file)
-    music_dst = task_dir / music_src.name
+    music_dst = pp.music_dir / music_src.name
     shutil.copy(str(music_src), str(music_dst))
+    logger.info(f"[Server] 音乐已保存: {music_dst}")
 
+    # 复制原始视频到 videos/raw/
     video_paths: list[str] = []
     for vf in (video_files if isinstance(video_files, list) else [video_files]):
         src = _fp(vf)
-        dst = task_dir / src.name
+        dst = pp.raw_videos_dir / src.name
         shutil.copy(str(src), str(dst))
         video_paths.append(str(dst))
+    logger.info(f"[Server] 视频已保存: {len(video_paths)} 个 → {pp.raw_videos_dir}")
 
-    output_path = str(Path("output/final") / f"{task_id}_result.mp4")
-    Path("output/final").mkdir(parents=True, exist_ok=True)
+    output_path = str(pp.final_path)
 
     background_str = (background_text or "").strip() or None
     initial_state: dict[str, Any] = {
@@ -210,6 +217,7 @@ async def run_pipeline(music_file, video_files, background_text, no_reviewer, _l
         "background_info":     background_str,
         "editing_style":       "visual_driven",
         "output_path":         output_path,
+        "project_name":        project_name,
         "runtime_config":      {},
         "planner_retry_count": 0,
         "current_errors":      [],
@@ -219,7 +227,7 @@ async def run_pipeline(music_file, video_files, background_text, no_reviewer, _l
     async for chunk in _run(initial_state, background_str, video_paths, output_path, no_reviewer, task_id):
         if first:
             log_str, btn, vid, tid = chunk
-            yield f"[{task_id}] 启动 — 音乐: {music_dst.name}，视频: {len(video_paths)} 个\n" + log_str, btn, vid, tid
+            yield f"[{task_id}] 启动 — 项目目录: {pp.root}\n  音乐: {music_dst.name}\n  视频: {len(video_paths)} 个\n" + log_str, btn, vid, tid
             first = False
         else:
             yield chunk
@@ -365,7 +373,7 @@ demo.queue()
 app = demo.app
 
 if __name__ == "__main__":
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    Path("projects").mkdir(parents=True, exist_ok=True)
     demo.launch(
         server_name="0.0.0.0",
         server_port=6006,

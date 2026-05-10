@@ -30,6 +30,20 @@ output/
 *.mp3
 !demo/*.mp4
 
+# Projects (runtime, contains user videos/music — copyrighted)
+projects/
+
+# Eval scratch scripts (keep only eval_metrics.py)
+eval/*.py
+eval/*.bat
+eval/adaptive_scenes/
+!eval/eval_metrics.py
+
+# Eval videos (raw sources — copyrighted); keep only the report
+eval_videos/**/*.json
+eval_videos/**/*.mp4
+eval_videos/**/*.mov
+
 # Model weights (download separately)
 clip-vit-base-patch32/
 *.pt
