@@ -27,14 +27,11 @@ Upload music and videos, and the system handles everything: beat analysis → sc
 ---
 
 
-https://github.com/user-attachments/assets/acdcd21b-1867-40be-80e5-e3ed08c2b40c
+ ## 🎬 Demo  🔊 turn on audio
 
+  **Music**: SawanoHiroyuki[nZk] — *GravityWall* | **Footage**: Fate/stay night
 
-## 🎬 Demo <a id="demo"></a>
-
-| Music | Footage | Video |
-|-------|---------|-------|
-| sawanohiroyukinzk "GravityWall" | Fate/stay night | [Watch](demo1.mp4) |
+  https://github.com/user-attachments/assets/acdcd21b-1867-40be-80e5-e3ed08c2b40c
 
 ---
 
