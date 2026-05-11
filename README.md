@@ -1,3 +1,5 @@
+
+
 # Motif
 
 **Let music edit your videos.**
@@ -32,6 +34,12 @@ Upload music and videos, and the system handles everything: beat analysis → sc
   **Music**: SawanoHiroyuki[nZk] — *GravityWall* | **Footage**: Fate/stay night
 
   https://github.com/user-attachments/assets/acdcd21b-1867-40be-80e5-e3ed08c2b40c
+
+
+ **Music**: KIVΛ — *Used to be* (Cytus II) | **Footage**: BLAME! × Cytus II CG
+
+  https://github.com/user-attachments/assets/f351ab4c-92b9-43a2-aa85-5874f4256ffe
+
 
 ---
 
