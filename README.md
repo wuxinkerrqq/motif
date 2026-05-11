@@ -30,7 +30,7 @@ Upload music and videos, and the system handles everything: beat analysis → sc
 
 | Music | Footage | Video |
 |-------|---------|-------|
-| sawanohiroyukinzk "GravityWall" | Fate/stay night | [Watch](demo/demo3_small.mp4) |
+| sawanohiroyukinzk "GravityWall" | Fate/stay night | [Watch](demo1.mp4) |
 
 ---
 
