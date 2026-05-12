@@ -6,13 +6,16 @@
 
 > Feed it a song + a pile of video clips, get a beat-synced remix back.
 
-<p align="center">
-    <img src="https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white" />
-    <img src="https://img.shields.io/badge/LangGraph-1.0-1C3C3C" />
-    <img src="https://img.shields.io/badge/FFmpeg-7.0-007808?logo=ffmpeg&logoColor=white" />
+  <p align="center">
+    <img src="https://img.shields.io/badge/🎵-Beat_Synchronized-ff6b9d" />
+    <img src="https://img.shields.io/badge/🎬-One_Click_Remix-4a90e2" />
+    <img src="https://img.shields.io/badge/🤖-LLM_Orchestrated-8b5cf6" />
+    <img src="https://img.shields.io/badge/🎞️-NLE_Ready-00c896" />
+    <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" />
     <img src="https://img.shields.io/badge/License-MIT-yellow" />
     <img src="https://img.shields.io/github/stars/wuxinkerrqq/motif?style=social" />
   </p>
+
 
   <p align="center">
     <a href="#demo">Demo</a> ·
