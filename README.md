@@ -11,7 +11,6 @@
     <img src="https://img.shields.io/badge/🎬-One_Click_Remix-4a90e2" />
     <img src="https://img.shields.io/badge/🤖-LLM_Orchestrated-8b5cf6" />
     <img src="https://img.shields.io/badge/🎞️-NLE_Ready-00c896" />
-    <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" />
     <img src="https://img.shields.io/badge/License-MIT-yellow" />
     <img src="https://img.shields.io/github/stars/wuxinkerrqq/motif?style=social" />
   </p>
